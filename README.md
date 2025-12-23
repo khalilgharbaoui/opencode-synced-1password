@@ -15,18 +15,22 @@ Sync global OpenCode configuration across machines via a GitHub repo, with optio
 - GitHub CLI (`gh`) installed and authenticated (`gh auth login`)
 - Git installed and available on PATH
 
-## Install
+## Setup
 
-```bash
-npm install -g opencode-sync
-```
-
-Enable the plugin in your global OpenCode config:
+Enable the plugin in your global OpenCode config (OpenCode will install it on next run):
 
 ```jsonc
 {
-  "plugin": ["opencode-sync"],
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-sync"]
 }
+```
+
+OpenCode does not auto-update plugins. To update, remove the cached plugin and restart OpenCode:
+
+```bash
+rm -rf ~/.cache/opencode/node_modules/opencode-sync
+opencode
 ```
 
 ## Configure
@@ -77,6 +81,44 @@ Overrides are merged into the runtime config and re-applied to `opencode.json(c)
 - `/opencode-sync-pull` to fetch and apply remote config
 - `/opencode-sync-push` to commit and push local changes
 - `/opencode-sync-enable-secrets` to opt in to secrets sync
+
+<details>
+<summary>Manual (slash command alternative)</summary>
+
+### Configure
+
+Create `~/.config/opencode/opencode-sync.jsonc`:
+
+```jsonc
+{
+  "repo": {
+    "owner": "your-org",
+    "name": "opencode-config",
+    "branch": "main"
+  },
+  "includeSecrets": false,
+  "extraSecretPaths": []
+}
+```
+
+### Enable secrets (private repo required)
+
+Set `"includeSecrets": true` and optionally add `"extraSecretPaths"`. The plugin will refuse to sync secrets if the repo is not private.
+
+### Trigger a sync
+
+Restart OpenCode to run the startup sync flow (pull remote, apply if changed, push local changes if needed).
+
+### Check status
+
+Inspect the local repo directly:
+
+```bash
+cd ~/.local/share/opencode/opencode-sync/repo
+git status
+git log --oneline -5
+```
+</details>
 
 ## Recovery
 
