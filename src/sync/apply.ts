@@ -194,9 +194,13 @@ async function applyExtraSecrets(plan: SyncPlan, fromRepo: boolean): Promise<voi
 
 async function writeExtraSecretsManifest(plan: SyncPlan): Promise<void> {
   const allowlist = plan.extraSecrets.allowlist;
-  if (allowlist.length === 0) return;
-
   const extraDir = path.join(path.dirname(plan.extraSecrets.manifestPath), 'extra');
+  if (allowlist.length === 0) {
+    await removePath(plan.extraSecrets.manifestPath);
+    await removePath(extraDir);
+    return;
+  }
+
   await removePath(extraDir);
 
   const entries: ExtraSecretManifestEntry[] = [];
