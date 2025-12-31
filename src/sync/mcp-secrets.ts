@@ -112,9 +112,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function cloneConfig(config: Record<string, unknown>): Record<string, unknown> {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(config);
-  }
   return JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
 }
 
@@ -136,7 +133,7 @@ export function stripOverrideKeys(
   const result: Record<string, unknown> = { ...base };
 
   for (const [key, removeValue] of Object.entries(toRemove)) {
-    if (!Object.hasOwn(result, key)) continue;
+    if (!hasOwn(result, key)) continue;
     const currentValue = result[key];
     if (isPlainObject(removeValue) && isPlainObject(currentValue)) {
       const stripped = stripOverrideKeys(
@@ -159,4 +156,8 @@ export function stripOverrideKeys(
 
 export function hasOverrides(value: Record<string, unknown>): boolean {
   return Object.keys(value).length > 0;
+}
+
+function hasOwn(target: Record<string, unknown>, key: string): boolean {
+  return Object.hasOwn(target, key);
 }

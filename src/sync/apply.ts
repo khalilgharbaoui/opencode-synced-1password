@@ -283,7 +283,7 @@ function isDeepEqual(left: unknown, right: unknown): boolean {
     const rightKeys = Object.keys(right as Record<string, unknown>);
     if (leftKeys.length !== rightKeys.length) return false;
     for (const key of leftKeys) {
-      if (!Object.hasOwn(right, key)) return false;
+      if (!hasOwn(right as Record<string, unknown>, key)) return false;
       if (
         !isDeepEqual(
           (left as Record<string, unknown>)[key],
@@ -297,4 +297,8 @@ function isDeepEqual(left: unknown, right: unknown): boolean {
   }
 
   return false;
+}
+
+function hasOwn(target: Record<string, unknown>, key: string): boolean {
+  return Object.hasOwn(target, key);
 }
