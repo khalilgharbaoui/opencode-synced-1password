@@ -10,6 +10,20 @@ All notable changes to this project will be documented here by Release Please.
 * harden plugin load when command assets are missing and broaden module exports
 * add production-like local pack test script
 
+## [0.4.1](https://github.com/iHildy/opencode-synced/compare/v0.4.0...v0.4.1) (2025-12-31)
+
+
+### Bug Fixes
+
+* use .js extensions in missed imports and update convention ([bae3ebb](https://github.com/iHildy/opencode-synced/commit/bae3ebb7fbc3696965190d49d29deaa3e3ca6f3f))
+
+## [0.4.0](https://github.com/iHildy/opencode-synced/compare/v0.3.0...v0.4.0) (2025-12-31)
+
+
+### Features
+
+* force release 0.4.0 ([e104eab](https://github.com/iHildy/opencode-synced/commit/e104eab65219de06dd0fd2115a66cf1fdcf64cdd))
+
 ## [0.3.0](https://github.com/iHildy/opencode-synced/compare/v0.2.0...v0.3.0) (2025-12-31)
 
 
