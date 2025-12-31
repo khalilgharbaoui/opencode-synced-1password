@@ -158,7 +158,6 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
       await ensureRepoCloned(ctx.$, config, repoRoot);
       await ensureSecretsPolicy(ctx, config);
 
-      // Perform initial sync if repo was just created
       if (created) {
         const overrides = await loadOverrides(locations);
         const plan = buildSyncPlan(config, locations, repoRoot);
@@ -183,7 +182,6 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
       return lines.join('\n');
     },
     link: async (options: LinkOptions) => {
-      // Search for existing sync repo
       const found = await findSyncRepo(ctx.$, options.repo);
 
       if (!found) {
@@ -203,7 +201,6 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         return lines.join('\n');
       }
 
-      // Found a repo - configure and pull
       const config = normalizeSyncConfig({
         repo: { owner: found.owner, name: found.name },
         includeSecrets: false,
@@ -218,7 +215,6 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
 
       const branch = await resolveBranch(ctx, config, repoRoot);
 
-      // Fetch and apply remote config
       await fetchAndFastForward(ctx.$, repoRoot, branch);
 
       const overrides = await loadOverrides(locations);
