@@ -296,17 +296,17 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         const lines = [
           `Linked to existing sync repo: ${found.owner}/${found.name}`,
           '',
-          'Your local OpenCode config has been OVERWRITTEN with the synced config.',
+          'Your local opencode config has been OVERWRITTEN with the synced config.',
           'Your local overrides file was preserved and applied on top.',
           '',
-          'Restart OpenCode to apply the new settings.',
+          'Restart opencode to apply the new settings.',
           '',
           found.isPrivate
             ? 'To enable secrets sync, run: /sync-enable-secrets'
             : 'Note: Repo is public. Secrets sync is disabled.',
         ];
 
-        await showToast(ctx.client, 'Config synced. Restart OpenCode to apply.', 'info');
+        await showToast(ctx.client, 'Config synced. Restart opencode to apply.', 'info');
         return lines.join('\n');
       }),
     pull: () =>
@@ -339,8 +339,8 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           lastRemoteUpdate: new Date().toISOString(),
         });
 
-        await showToast(ctx.client, 'Config updated. Restart OpenCode to apply.', 'info');
-        return 'Remote config applied. Restart OpenCode to use new settings.';
+        await showToast(ctx.client, 'Config updated. Restart opencode to apply.', 'info');
+        return 'Remote config applied. Restart opencode to use new settings.';
       }),
     push: () =>
       runExclusive(async () => {
@@ -469,7 +469,7 @@ async function runStartup(
       lastPull: new Date().toISOString(),
       lastRemoteUpdate: new Date().toISOString(),
     });
-    await showToast(ctx.client, 'Config updated. Restart OpenCode to apply.', 'info');
+    await showToast(ctx.client, 'Config updated. Restart opencode to apply.', 'info');
     return;
   }
 

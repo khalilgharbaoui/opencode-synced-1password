@@ -67,6 +67,6 @@
 
 ## Project Context
 
-- **Type**: ES Module package for OpenCode plugin system
+- **Type**: ES Module package for opencode plugin system
 - **Target**: Bun runtime, ES2021+
-- **Purpose**: Sync global OpenCode config across machines via GitHub
+- **Purpose**: Sync global opencode config across machines via GitHub

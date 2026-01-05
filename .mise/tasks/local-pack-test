@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Install packed plugin into OpenCode cache (production-like test)"
+#MISE description="Install packed plugin into opencode cache (production-like test)"
 set -euo pipefail
 
 PLUGIN_LOCAL_FILE="${HOME}/.config/opencode/plugin/opencode-synced-local.ts"

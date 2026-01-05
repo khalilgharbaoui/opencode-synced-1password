@@ -109,12 +109,12 @@ async function loadCommands(): Promise<ParsedCommand[]> {
   return commands;
 }
 
-export const OpencodeConfigSync: Plugin = async (ctx) => {
+export const opencodeConfigSync: Plugin = async (ctx) => {
   const commands = await loadCommands();
   const service = createSyncService(ctx);
 
   const syncTool = tool({
-    description: 'Manage OpenCode config sync with a GitHub repo',
+    description: 'Manage opencode config sync with a GitHub repo',
     args: {
       command: tool.schema
         .enum(['status', 'init', 'link', 'pull', 'push', 'enable-secrets', 'resolve'])
@@ -229,8 +229,8 @@ export const OpencodeConfigSync: Plugin = async (ctx) => {
   };
 };
 
-export const OpencodeSynced = OpencodeConfigSync;
-export default OpencodeConfigSync;
+export const opencodeSynced = opencodeConfigSync;
+export default opencodeConfigSync;
 
 function formatError(error: unknown): string {
   if (error instanceof Error) return error.message;

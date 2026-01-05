@@ -1,4 +1,4 @@
-name: Opencode Smoke
+name: opencode smoke
 
 on:
   workflow_dispatch:
@@ -45,17 +45,17 @@ jobs:
 
       - name: Install opencode
         env:
-          OPENCODE_INSTALL_DIR: ${{ runner.temp }}/opencode/bin
+          opencode_install_dir: ${{ runner.temp }}/opencode/bin
         run: |
           curl -fsSL https://opencode.ai/install | bash
-          echo "${OPENCODE_INSTALL_DIR}" >> "$GITHUB_PATH"
+          echo "${opencode_install_dir}" >> "$GITHUB_PATH"
 
       - name: Configure clean opencode home
         env:
-          OPENCODE_HOME: ${{ runner.temp }}/opencode-home
+          opencode_home: ${{ runner.temp }}/opencode-home
           PLUGIN_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          export HOME="$OPENCODE_HOME"
+          export HOME="$opencode_home"
           export XDG_CONFIG_HOME="$HOME/.config"
           export XDG_CACHE_HOME="$HOME/.cache"
           export XDG_DATA_HOME="$HOME/.local/share"
@@ -89,11 +89,11 @@ jobs:
 
       - name: Launch opencode (smoke)
         env:
-          OPENCODE_HOME: ${{ runner.temp }}/opencode-home
-          OPENCODE_SMOKE_TIMEOUT: ${{ inputs.timeout }}
-          OPENCODE_SMOKE_LOG: ${{ runner.temp }}/opencode-smoke.log
+          opencode_home: ${{ runner.temp }}/opencode-home
+          opencode_smoke_timeout: ${{ inputs.timeout }}
+          opencode_smoke_log: ${{ runner.temp }}/opencode-smoke.log
         run: |
-          export HOME="$OPENCODE_HOME"
+          export HOME="$opencode_home"
           export XDG_CONFIG_HOME="$HOME/.config"
           export XDG_CACHE_HOME="$HOME/.cache"
           export XDG_DATA_HOME="$HOME/.local/share"
@@ -106,8 +106,8 @@ jobs:
           import time
           import sys
 
-          timeout = int(os.environ.get("OPENCODE_SMOKE_TIMEOUT", "20"))
-          log_path = os.environ.get("OPENCODE_SMOKE_LOG", "opencode-smoke.log")
+          timeout = int(os.environ.get("opencode_smoke_timeout", "20"))
+          log_path = os.environ.get("opencode_smoke_log", "opencode-smoke.log")
           cmd = ["opencode", "serve", "--port", "4096", "--hostname", "127.0.0.1"]
 
           proc = subprocess.Popen(

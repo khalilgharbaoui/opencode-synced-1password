@@ -100,7 +100,7 @@ export function resolveSyncLocations(
   platform: NodeJS.Platform = process.platform
 ): SyncLocations {
   const xdg = resolveXdgPaths(env, platform);
-  const customConfigDir = env.OPENCODE_CONFIG_DIR;
+  const customConfigDir = env.opencode_config_dir;
   const configRoot = customConfigDir
     ? path.resolve(expandHome(customConfigDir, xdg.homeDir))
     : path.join(xdg.configDir, 'opencode');
