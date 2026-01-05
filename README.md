@@ -1,10 +1,10 @@
 # opencode-synced
 
-Sync global OpenCode configuration across machines via a GitHub repo, with optional secrets support for private repos.
+Sync global opencode configuration across machines via a GitHub repo, with optional secrets support for private repos.
 
 ## Features
 
-- Syncs global OpenCode config (`~/.config/opencode`) and related directories
+- Syncs global opencode config (`~/.config/opencode`) and related directories
 - Optional secrets sync when the repo is private
 - Optional session sync to share conversation history across machines
 - Optional prompt stash sync to share stashed prompts and history across machines
@@ -19,7 +19,7 @@ Sync global OpenCode configuration across machines via a GitHub repo, with optio
 
 ## Setup
 
-Enable the plugin in your global OpenCode config (OpenCode will install it on next run):
+Enable the plugin in your global opencode config (opencode will install it on next run):
 
 ```jsonc
 {
@@ -28,7 +28,7 @@ Enable the plugin in your global OpenCode config (OpenCode will install it on ne
 }
 ```
 
-OpenCode does not auto-update plugins. To update, modify the version number in your config file.
+opencode does not auto-update plugins. To update, modify the version number in your config file.
 
 ## Configure
 
@@ -50,7 +50,7 @@ Run `/sync-link` to connect to your existing sync repo:
 
 If auto-detection fails, specify the repo name: `/sync-link my-opencode-config`
 
-After linking, restart OpenCode to apply the synced settings.
+After linking, restart opencode to apply the synced settings.
 
 ### Custom repo name or org
 
@@ -101,7 +101,7 @@ in a private repo, set `"includeMcpSecrets": true` (requires `includeSecrets`).
 
 ### Sessions (private repos only)
 
-Sync your OpenCode sessions (conversation history from `/sessions`) across machines by setting `"includeSessions": true`. This requires `includeSecrets` to also be enabled since sessions may contain sensitive data.
+Sync your opencode sessions (conversation history from `/sessions`) across machines by setting `"includeSessions": true`. This requires `includeSecrets` to also be enabled since sessions may contain sensitive data.
 
 ```jsonc
 {
@@ -158,8 +158,8 @@ If you want MCP secrets committed (private repos only), set `"includeMcpSecrets"
 Env var naming rules:
 
 - If the header name already looks like an env var (e.g. `CONTEXT7_API_KEY`), it is used directly.
-- Otherwise: `OPENCODE_MCP_<SERVER>_<HEADER>` (uppercase, non-alphanumerics become `_`).
-- OAuth client secrets use `OPENCODE_MCP_<SERVER>_OAUTH_CLIENT_SECRET`.
+- Otherwise: `opencode_mcp_<SERVER>_<HEADER>` (uppercase, non-alphanumerics become `_`).
+- OAuth client secrets use `opencode_mcp_<SERVER>_OAUTH_CLIENT_SECRET`.
 
 ## Usage
 
@@ -178,7 +178,7 @@ Env var naming rules:
 
 ### Trigger a sync
 
-Restart OpenCode to run the startup sync flow (pull remote, apply if changed, push local changes if needed).
+Restart opencode to run the startup sync flow (pull remote, apply if changed, push local changes if needed).
 
 ### Check status
 
@@ -265,7 +265,7 @@ bun -e '
 ### Local testing (production-like)
 
 To test the same artifact that would be published, install from a packed tarball
-into OpenCode's cache:
+into opencode's cache:
 
 ```bash
 mise run local-pack-test
@@ -279,7 +279,7 @@ Then set `~/.config/opencode/opencode.json` to use:
 }
 ```
 
-Restart OpenCode to pick up the cached install.
+Restart opencode to pick up the cached install.
 
 
 ## Prefer a CLI version?
