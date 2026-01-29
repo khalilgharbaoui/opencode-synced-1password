@@ -18,6 +18,7 @@ export interface SyncConfig {
   includeSessions?: boolean;
   includePromptStash?: boolean;
   extraSecretPaths?: string[];
+  extraConfigPaths?: string[];
 }
 
 export interface SyncState {
@@ -53,6 +54,7 @@ export function normalizeSyncConfig(config: SyncConfig): SyncConfig {
     includeSessions: Boolean(config.includeSessions),
     includePromptStash: Boolean(config.includePromptStash),
     extraSecretPaths: Array.isArray(config.extraSecretPaths) ? config.extraSecretPaths : [],
+    extraConfigPaths: Array.isArray(config.extraConfigPaths) ? config.extraConfigPaths : [],
     localRepoPath: config.localRepoPath,
     repo: config.repo,
   };

@@ -94,12 +94,16 @@ describe('parseJsonc', () => {
       "extraSecretPaths": [
         "foo",
       ],
+      "extraConfigPaths": [
+        "bar",
+      ],
     }`;
 
     expect(parseJsonc(input)).toEqual({
       repo: { owner: 'me', name: 'opencode-config' },
       includeSecrets: false,
       extraSecretPaths: ['foo'],
+      extraConfigPaths: ['bar'],
     });
   });
 });

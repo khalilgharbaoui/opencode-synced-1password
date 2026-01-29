@@ -140,6 +140,7 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
       create: tool.schema.boolean().optional().describe('Create repo if missing'),
       private: tool.schema.boolean().optional().describe('Create repo as private'),
       extraSecretPaths: tool.schema.array(tool.schema.string()).optional(),
+      extraConfigPaths: tool.schema.array(tool.schema.string()).optional(),
       localRepoPath: tool.schema.string().optional().describe('Override local repo path'),
     },
     async execute(args) {
@@ -161,6 +162,7 @@ export const opencodeConfigSync: Plugin = async (ctx) => {
             create: args.create,
             private: args.private,
             extraSecretPaths: args.extraSecretPaths,
+            extraConfigPaths: args.extraConfigPaths,
             localRepoPath: args.localRepoPath,
           });
         }

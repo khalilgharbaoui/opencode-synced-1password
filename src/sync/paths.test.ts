@@ -47,6 +47,7 @@ describe('buildSyncPlan', () => {
       repo: { owner: 'acme', name: 'config' },
       includeSecrets: false,
       extraSecretPaths: ['/home/test/.ssh/id_rsa'],
+      extraConfigPaths: ['/home/test/.config/opencode/custom.json'],
     };
 
     const plan = buildSyncPlan(config, locations, '/repo', 'linux');
@@ -54,6 +55,7 @@ describe('buildSyncPlan', () => {
 
     expect(secretItems.length).toBe(0);
     expect(plan.extraSecrets.allowlist.length).toBe(0);
+    expect(plan.extraConfigs.allowlist.length).toBe(1);
   });
 
   it('includes secrets when includeSecrets is true', () => {
@@ -63,6 +65,7 @@ describe('buildSyncPlan', () => {
       repo: { owner: 'acme', name: 'config' },
       includeSecrets: true,
       extraSecretPaths: ['/home/test/.ssh/id_rsa'],
+      extraConfigPaths: ['/home/test/.config/opencode/custom.json'],
     };
 
     const plan = buildSyncPlan(config, locations, '/repo', 'linux');
@@ -70,5 +73,6 @@ describe('buildSyncPlan', () => {
 
     expect(secretItems.length).toBe(2);
     expect(plan.extraSecrets.allowlist.length).toBe(1);
+    expect(plan.extraConfigs.allowlist.length).toBe(1);
   });
 });
