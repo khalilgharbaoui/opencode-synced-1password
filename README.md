@@ -77,6 +77,7 @@ Create `~/.config/opencode/opencode-synced.jsonc`:
   "includeSessions": false,
   "includePromptStash": false,
   "extraSecretPaths": [],
+  "extraConfigPaths": [],
 }
 ```
 
@@ -87,6 +88,7 @@ Create `~/.config/opencode/opencode-synced.jsonc`:
 - `~/.config/opencode/opencode.json` and `opencode.jsonc`
 - `~/.config/opencode/AGENTS.md`
 - `~/.config/opencode/agent/`, `command/`, `mode/`, `tool/`, `themes/`, `plugin/`
+- Any extra paths in `extraConfigPaths` (allowlist, files or folders)
 
 ### Secrets (private repos only)
 
@@ -94,7 +96,7 @@ Enable secrets with `/sync-enable-secrets` or set `"includeSecrets": true`:
 
 - `~/.local/share/opencode/auth.json`
 - `~/.local/share/opencode/mcp-auth.json`
-- Any extra paths in `extraSecretPaths` (allowlist)
+- Any extra paths in `extraSecretPaths` (allowlist, files or folders)
 
 MCP API keys stored inside `opencode.json(c)` are **not** committed by default. To allow them
 in a private repo, set `"includeMcpSecrets": true` (requires `includeSecrets`).

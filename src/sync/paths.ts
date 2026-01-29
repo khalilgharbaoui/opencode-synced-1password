@@ -29,7 +29,7 @@ export interface SyncItem {
   isConfigFile: boolean;
 }
 
-export interface ExtraSecretPlan {
+export interface ExtraPathPlan {
   allowlist: string[];
   manifestPath: string;
   entries: Array<{ sourcePath: string; repoPath: string }>;
@@ -37,7 +37,8 @@ export interface ExtraSecretPlan {
 
 export interface SyncPlan {
   items: SyncItem[];
-  extraSecrets: ExtraSecretPlan;
+  extraSecrets: ExtraPathPlan;
+  extraConfigs: ExtraPathPlan;
   repoRoot: string;
   homeDir: string;
   platform: NodeJS.Platform;
@@ -146,13 +147,15 @@ export function isSamePath(
   return normalizePath(left, homeDir, platform) === normalizePath(right, homeDir, platform);
 }
 
-export function encodeSecretPath(inputPath: string): string {
+export function encodeExtraPath(inputPath: string): string {
   const normalized = inputPath.replace(/\\/g, '/');
   const safeBase = normalized.replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/^_+/, '');
   const hash = crypto.createHash('sha1').update(normalized).digest('hex').slice(0, 8);
   const base = safeBase ? safeBase.slice(-80) : 'secret';
   return `${base}-${hash}`;
 }
+
+export const encodeSecretPath = encodeExtraPath;
 
 export function resolveRepoRoot(config: SyncConfig | null, locations: SyncLocations): string {
   if (config?.localRepoPath) {
@@ -175,6 +178,8 @@ export function buildSyncPlan(
   const repoSecretsRoot = path.join(repoRoot, 'secrets');
   const repoExtraDir = path.join(repoSecretsRoot, 'extra');
   const manifestPath = path.join(repoSecretsRoot, 'extra-manifest.json');
+  const repoConfigExtraDir = path.join(repoConfigRoot, 'extra');
+  const configManifestPath = path.join(repoConfigRoot, 'extra-manifest.json');
 
   const items: SyncItem[] = [];
 
@@ -247,26 +252,51 @@ export function buildSyncPlan(
     }
   }
 
-  const allowlist = config.includeSecrets
-    ? (config.extraSecretPaths ?? []).map((entry) =>
-        normalizePath(entry, locations.xdg.homeDir, platform)
-      )
-    : [];
+  const extraSecrets = buildExtraPathPlan(
+    config.includeSecrets ? config.extraSecretPaths : [],
+    locations,
+    repoExtraDir,
+    manifestPath,
+    platform
+  );
 
-  const entries = allowlist.map((sourcePath) => ({
-    sourcePath,
-    repoPath: path.join(repoExtraDir, encodeSecretPath(sourcePath)),
-  }));
+  const extraConfigs = buildExtraPathPlan(
+    config.extraConfigPaths,
+    locations,
+    repoConfigExtraDir,
+    configManifestPath,
+    platform
+  );
 
   return {
     items,
-    extraSecrets: {
-      allowlist,
-      manifestPath,
-      entries,
-    },
+    extraSecrets,
+    extraConfigs,
     repoRoot,
     homeDir: locations.xdg.homeDir,
     platform,
+  };
+}
+
+function buildExtraPathPlan(
+  inputPaths: string[] | undefined,
+  locations: SyncLocations,
+  repoExtraDir: string,
+  manifestPath: string,
+  platform: NodeJS.Platform
+): ExtraPathPlan {
+  const allowlist = (inputPaths ?? []).map((entry) =>
+    normalizePath(entry, locations.xdg.homeDir, platform)
+  );
+
+  const entries = allowlist.map((sourcePath) => ({
+    sourcePath,
+    repoPath: path.join(repoExtraDir, encodeExtraPath(sourcePath)),
+  }));
+
+  return {
+    allowlist,
+    manifestPath,
+    entries,
   };
 }

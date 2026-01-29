@@ -56,6 +56,7 @@ interface InitOptions {
   create?: boolean;
   private?: boolean;
   extraSecretPaths?: string[];
+  extraConfigPaths?: string[];
   localRepoPath?: string;
 }
 
@@ -274,6 +275,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           includeSessions: false,
           includePromptStash: false,
           extraSecretPaths: [],
+          extraConfigPaths: [],
         });
 
         await writeSyncConfig(locations, config);
@@ -538,6 +540,7 @@ async function buildConfigFromInit($: Shell, options: InitOptions) {
     includeSessions: options.includeSessions ?? false,
     includePromptStash: options.includePromptStash ?? false,
     extraSecretPaths: options.extraSecretPaths ?? [],
+    extraConfigPaths: options.extraConfigPaths ?? [],
     localRepoPath: options.localRepoPath,
   });
 }

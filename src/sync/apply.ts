@@ -16,17 +16,27 @@ import {
   mergeOverrides,
   stripOverrideKeys,
 } from './mcp-secrets.js';
-import type { SyncItem, SyncPlan } from './paths.js';
+import type { ExtraPathPlan, SyncItem, SyncPlan } from './paths.js';
 import { normalizePath } from './paths.js';
 
-interface ExtraSecretManifestEntry {
-  sourcePath: string;
-  repoPath: string;
+type ExtraPathType = 'file' | 'dir';
+
+interface ExtraPathManifestItem {
+  relativePath: string;
+  type: ExtraPathType;
   mode?: number;
 }
 
-interface ExtraSecretManifest {
-  entries: ExtraSecretManifestEntry[];
+interface ExtraPathManifestEntry {
+  sourcePath: string;
+  repoPath: string;
+  type?: ExtraPathType;
+  mode?: number;
+  items?: ExtraPathManifestItem[];
+}
+
+interface ExtraPathManifest {
+  entries: ExtraPathManifestEntry[];
 }
 
 export async function syncRepoToLocal(
@@ -37,7 +47,8 @@ export async function syncRepoToLocal(
     await copyItem(item.repoPath, item.localPath, item.type);
   }
 
-  await applyExtraSecrets(plan, true);
+  await applyExtraPaths(plan, plan.extraConfigs);
+  await applyExtraPaths(plan, plan.extraSecrets);
 
   if (overrides && Object.keys(overrides).length > 0) {
     await applyOverridesToLocalConfig(plan, overrides);
@@ -90,7 +101,8 @@ export async function syncLocalToRepo(
     await copyItem(item.localPath, item.repoPath, item.type, true);
   }
 
-  await writeExtraSecretsManifest(plan);
+  await writeExtraPathManifest(plan, plan.extraConfigs);
+  await writeExtraPathManifest(plan, plan.extraSecrets);
 }
 
 async function copyItem(
@@ -212,14 +224,14 @@ async function removePath(targetPath: string): Promise<void> {
   await fs.rm(targetPath, { recursive: true, force: true });
 }
 
-async function applyExtraSecrets(plan: SyncPlan, fromRepo: boolean): Promise<void> {
-  const allowlist = plan.extraSecrets.allowlist;
+async function applyExtraPaths(plan: SyncPlan, extra: ExtraPathPlan): Promise<void> {
+  const allowlist = extra.allowlist;
   if (allowlist.length === 0) return;
 
-  if (!(await pathExists(plan.extraSecrets.manifestPath))) return;
+  if (!(await pathExists(extra.manifestPath))) return;
 
-  const manifestContent = await fs.readFile(plan.extraSecrets.manifestPath, 'utf8');
-  const manifest = parseJsonc<ExtraSecretManifest>(manifestContent);
+  const manifestContent = await fs.readFile(extra.manifestPath, 'utf8');
+  const manifest = parseJsonc<ExtraPathManifest>(manifestContent);
 
   for (const entry of manifest.entries) {
     const normalized = normalizePath(entry.sourcePath, plan.homeDir, plan.platform);
@@ -230,47 +242,114 @@ async function applyExtraSecrets(plan: SyncPlan, fromRepo: boolean): Promise<voi
       ? entry.repoPath
       : path.join(plan.repoRoot, entry.repoPath);
     const localPath = entry.sourcePath;
+    const entryType: ExtraPathType = entry.type ?? 'file';
 
     if (!(await pathExists(repoPath))) continue;
 
-    if (fromRepo) {
-      await copyFileWithMode(repoPath, localPath);
-      if (entry.mode !== undefined) {
-        await chmodIfExists(localPath, entry.mode);
-      }
-    }
+    await copyItem(repoPath, localPath, entryType);
+    await applyExtraPathModes(localPath, entry);
   }
 }
 
-async function writeExtraSecretsManifest(plan: SyncPlan): Promise<void> {
-  const allowlist = plan.extraSecrets.allowlist;
-  const extraDir = path.join(path.dirname(plan.extraSecrets.manifestPath), 'extra');
+async function writeExtraPathManifest(plan: SyncPlan, extra: ExtraPathPlan): Promise<void> {
+  const allowlist = extra.allowlist;
+  const extraDir = path.join(path.dirname(extra.manifestPath), 'extra');
   if (allowlist.length === 0) {
-    await removePath(plan.extraSecrets.manifestPath);
+    await removePath(extra.manifestPath);
     await removePath(extraDir);
     return;
   }
 
   await removePath(extraDir);
 
-  const entries: ExtraSecretManifestEntry[] = [];
+  const entries: ExtraPathManifestEntry[] = [];
 
-  for (const entry of plan.extraSecrets.entries) {
+  for (const entry of extra.entries) {
     const sourcePath = entry.sourcePath;
     if (!(await pathExists(sourcePath))) {
       continue;
     }
     const stat = await fs.stat(sourcePath);
-    await copyFileWithMode(sourcePath, entry.repoPath);
-    entries.push({
-      sourcePath,
-      repoPath: path.relative(plan.repoRoot, entry.repoPath),
-      mode: stat.mode & 0o777,
-    });
+    if (stat.isDirectory()) {
+      await copyDirRecursive(sourcePath, entry.repoPath);
+      const items = await collectExtraPathItems(sourcePath, sourcePath);
+      entries.push({
+        sourcePath,
+        repoPath: path.relative(plan.repoRoot, entry.repoPath),
+        type: 'dir',
+        mode: stat.mode & 0o777,
+        items,
+      });
+      continue;
+    }
+    if (stat.isFile()) {
+      await copyFileWithMode(sourcePath, entry.repoPath);
+      entries.push({
+        sourcePath,
+        repoPath: path.relative(plan.repoRoot, entry.repoPath),
+        type: 'file',
+        mode: stat.mode & 0o777,
+      });
+    }
   }
 
-  await fs.mkdir(path.dirname(plan.extraSecrets.manifestPath), { recursive: true });
-  await writeJsonFile(plan.extraSecrets.manifestPath, { entries }, { jsonc: false });
+  await fs.mkdir(path.dirname(extra.manifestPath), { recursive: true });
+  await writeJsonFile(extra.manifestPath, { entries }, { jsonc: false });
+}
+
+async function collectExtraPathItems(
+  sourcePath: string,
+  basePath: string
+): Promise<ExtraPathManifestItem[]> {
+  const items: ExtraPathManifestItem[] = [];
+  const entries = await fs.readdir(sourcePath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const entrySource = path.join(sourcePath, entry.name);
+    const relativePath = path.relative(basePath, entrySource);
+
+    if (entry.isDirectory()) {
+      const stat = await fs.stat(entrySource);
+      items.push({
+        relativePath,
+        type: 'dir',
+        mode: stat.mode & 0o777,
+      });
+      const nested = await collectExtraPathItems(entrySource, basePath);
+      items.push(...nested);
+      continue;
+    }
+
+    if (entry.isFile()) {
+      const stat = await fs.stat(entrySource);
+      items.push({
+        relativePath,
+        type: 'file',
+        mode: stat.mode & 0o777,
+      });
+    }
+  }
+
+  return items;
+}
+
+async function applyExtraPathModes(
+  targetPath: string,
+  entry: ExtraPathManifestEntry
+): Promise<void> {
+  if (entry.mode !== undefined) {
+    await chmodIfExists(targetPath, entry.mode);
+  }
+
+  if (!entry.items || entry.items.length === 0) {
+    return;
+  }
+
+  for (const item of entry.items) {
+    if (item.mode === undefined) continue;
+    const itemPath = path.join(targetPath, item.relativePath);
+    await chmodIfExists(itemPath, item.mode);
+  }
 }
 
 function isDeepEqual(left: unknown, right: unknown): boolean {
