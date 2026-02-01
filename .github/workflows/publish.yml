@@ -53,6 +53,11 @@ jobs:
 
           echo "requested_tag=$TAG" >> "$GITHUB_OUTPUT"
 
+          if [ "$TAG" = "latest" ]; then
+            echo "Skipping publish; will promote existing next -> latest"
+            exit 0
+          fi
+
           CANDIDATE_TAG="next"
           echo "Publishing candidate with tag: $CANDIDATE_TAG (requested: $TAG)"
           mise run publish --tag "$CANDIDATE_TAG"
