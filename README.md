@@ -1,4 +1,8 @@
-# opencode-synced
+# opencode-synced-1password
+
+Fork of opencode-synced with a 1Password secrets backend. Install plugin
+`opencode-synced-1password`; config files remain `opencode-synced.jsonc` and
+`opencode-synced.overrides.jsonc` for compatibility.
 
 Sync global opencode configuration across machines via a GitHub repo, with optional secrets support for private repos.
 
@@ -24,7 +28,7 @@ Enable the plugin in your global opencode config (opencode will install it on ne
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-synced"],
+  "plugin": ["opencode-synced-1password"],
 }
 ```
 
@@ -214,7 +218,7 @@ Then re-run `/sync-pull` or `/sync-push`.
 ## Removal
 
 <details>
-<summary>How to completely remove and delete opencode-synced</summary>
+<summary>How to completely remove and delete opencode-synced-1password</summary>
 
 Run this one-liner to remove the plugin from your config, delete local sync files, and delete the GitHub repository:
 
@@ -227,7 +231,7 @@ bun -e '
   ["opencode.json", "opencode.jsonc"].forEach(f => {
     const p = path.join(configDir, f);
     if (fs.existsSync(p)) {
-      const c = fs.readFileSync(p, "utf8"), u = c.replace(/"opencode-synced"\s*,?\s*/g, "").replace(/,\s*\]/g, "]");
+      const c = fs.readFileSync(p, "utf8"), u = c.replace(/"opencode-synced-1password"\s*,?\s*/g, "").replace(/,\s*\]/g, "]");
       if (c !== u) fs.writeFileSync(p, u);
     }
   });
@@ -244,12 +248,12 @@ bun -e '
   [scp, path.join(configDir, "opencode-synced.overrides.jsonc"), path.join(dataDir, "sync-state.json"), path.join(dataDir, "opencode-synced")].forEach(p => {
     if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
   });
-  console.log("opencode-synced removed.");
+  console.log("opencode-synced-1password removed.");
 '
 ```
 
 ### Manual steps
-1. Remove `"opencode-synced"` from the `plugin` array in `~/.config/opencode/opencode.json` (or `.jsonc`).
+1. Remove `"opencode-synced-1password"` from the `plugin` array in `~/.config/opencode/opencode.json` (or `.jsonc`).
 2. Delete the local configuration and state:
    ```bash
    rm ~/.config/opencode/opencode-synced.jsonc
@@ -279,7 +283,7 @@ Then set `~/.config/opencode/opencode.json` to use:
 
 ```jsonc
 {
-  "plugin": ["opencode-synced"]
+  "plugin": ["opencode-synced-1password"]
 }
 ```
 

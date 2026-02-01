@@ -36,7 +36,7 @@ jobs:
       - name: Resolve plugin version
         id: version
         run: |
-          VERSION=$(npm view opencode-synced@${{ inputs.tag }} version)
+          VERSION=$(npm view opencode-synced-1password@${{ inputs.tag }} version)
           if [ -z "$VERSION" ]; then
             echo "No version found for tag: ${{ inputs.tag }}"
             exit 1
@@ -65,7 +65,7 @@ jobs:
           cat > "$XDG_CONFIG_HOME/opencode/opencode.json" <<EOF
           {
             "\$schema": "https://opencode.ai/config.json",
-            "plugin": ["opencode-synced@${PLUGIN_VERSION}"]
+            "plugin": ["opencode-synced-1password@${PLUGIN_VERSION}"]
           }
           EOF
 

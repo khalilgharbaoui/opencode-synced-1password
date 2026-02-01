@@ -21,7 +21,7 @@ While version is `0.x.x`, breaking changes bump **minor** version.
 
 ### Release Process
 
-1. Push commits to `main` branch
+1. Push commits to `fork-release` branch
 2. Release Please will:
    - Analyze commits
    - Determine version bump
