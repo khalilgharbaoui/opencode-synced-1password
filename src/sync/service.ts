@@ -6,12 +6,12 @@ import { generateCommitMessage } from './commit.js';
 import type { NormalizedSyncConfig } from './config.js';
 import {
   canCommitMcpSecrets,
-  isOnePasswordBackend,
+  hasSecretsBackend,
   loadOverrides,
   loadState,
   loadSyncConfig,
   normalizeSyncConfig,
-  writeState,
+  updateState,
   writeSyncConfig,
 } from './config.js';
 import { SyncCommandError, SyncConfigMissingError } from './errors.js';
@@ -34,9 +34,10 @@ import {
   resolveRepoIdentifier,
 } from './repo.js';
 import {
-  createOnePasswordBackend,
-  resolveOnePasswordConfig,
+  computeSecretsHash,
+  createSecretsBackend,
   resolveRepoAuthPaths,
+  resolveSecretsBackendConfig,
   type SecretsBackend,
 } from './secrets-backend.js';
 import {
@@ -127,31 +128,24 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
       fn
     );
 
-  const resolveSecretsBackend = (
-    config: NormalizedSyncConfig,
-    options: { requireConfigured: boolean }
-  ): SecretsBackend | null => {
-    const resolution = resolveOnePasswordConfig(config);
+  const resolveSecretsBackend = (config: NormalizedSyncConfig): SecretsBackend | null => {
+    const resolution = resolveSecretsBackendConfig(config);
     if (resolution.state === 'none') {
       return null;
     }
 
     if (resolution.state === 'invalid') {
-      if (options.requireConfigured) {
-        throw new SyncCommandError(resolution.error);
-      }
-      log.warn('Secrets backend misconfigured; skipping', { error: resolution.error });
-      return null;
+      throw new SyncCommandError(resolution.error);
     }
 
-    return createOnePasswordBackend({ $: ctx.$, locations, config: resolution.config });
+    return createSecretsBackend({ $: ctx.$, locations, config: resolution.config });
   };
 
   const ensureAuthFilesNotTracked = async (
     repoRoot: string,
     config: NormalizedSyncConfig
   ): Promise<void> => {
-    if (!isOnePasswordBackend(config)) return;
+    if (!hasSecretsBackend(config)) return;
 
     const { authRepoPath, mcpAuthRepoPath } = resolveRepoAuthPaths(repoRoot);
     const tracked: string[] = [];
@@ -170,50 +164,90 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
     const trackedList = tracked.join(', ');
     throw new SyncCommandError(
       `Sync repo already tracks secret auth files (${trackedList}). ` +
-        'Remove them and rewrite history before enabling the 1Password backend.'
+        'Remove them and rewrite history before enabling a secrets backend.'
     );
   };
 
-  const runSecretsPullIfConfigured = async (config: NormalizedSyncConfig): Promise<void> => {
-    const backend = resolveSecretsBackend(config, { requireConfigured: false });
-    if (!backend) return;
+  const computeSecretsHashSafe = async (): Promise<string | null> => {
     try {
-      await backend.pull();
+      return await computeSecretsHash(locations);
     } catch (error) {
-      log.warn('Secrets backend pull failed; continuing', { error: formatError(error) });
+      log.warn('Failed to compute secrets hash', { error: formatError(error) });
+      return null;
     }
   };
 
-  const runSecretsPushIfConfigured = async (config: NormalizedSyncConfig): Promise<void> => {
-    const backend = resolveSecretsBackend(config, { requireConfigured: false });
-    if (!backend) return;
-    try {
-      await backend.push();
-    } catch (error) {
-      log.warn('Secrets backend push failed; continuing', { error: formatError(error) });
-    }
+  const updateSecretsHashState = async (): Promise<void> => {
+    const hash = await computeSecretsHashSafe();
+    if (!hash) return;
+    await updateState(locations, { lastSecretsHash: hash });
   };
+
+  const pushSecretsWithBackend = async (backend: SecretsBackend): Promise<'skipped' | 'pushed'> => {
+    const hash = await computeSecretsHashSafe();
+    if (hash) {
+      const state = await loadState(locations);
+      if (state.lastSecretsHash === hash) {
+        log.debug('Secrets unchanged; skipping secrets push');
+        return 'skipped';
+      }
+    }
+
+    await backend.push();
+    if (hash) {
+      await updateState(locations, { lastSecretsHash: hash });
+    }
+    return 'pushed';
+  };
+
+  const runSecretsPullIfConfigured = async (config: NormalizedSyncConfig): Promise<void> => {
+    const backend = resolveSecretsBackend(config);
+    if (!backend) return;
+    await backend.pull();
+    await updateSecretsHashState();
+  };
+
+  const runSecretsPushIfConfigured = async (
+    config: NormalizedSyncConfig
+  ): Promise<'not_configured' | 'skipped' | 'pushed'> => {
+    const backend = resolveSecretsBackend(config);
+    if (!backend) return 'not_configured';
+    return await pushSecretsWithBackend(backend);
+  };
+
+  const secretsBackendNotConfiguredMessage =
+    'Secrets backend not configured. Add secretsBackend to opencode-synced.jsonc.';
 
   const resolveSecretsBackendForCommand = async (): Promise<
     { backend: SecretsBackend } | { message: string }
   > => {
     const config = await getConfigOrThrow(locations);
-    const resolution = resolveOnePasswordConfig(config);
+    const resolution = resolveSecretsBackendConfig(config);
     if (resolution.state === 'none') {
       return {
-        message: 'Secrets backend not configured. Add secretsBackend to opencode-synced.jsonc.',
+        message: secretsBackendNotConfiguredMessage,
       };
     }
     if (resolution.state === 'invalid') {
       throw new SyncCommandError(resolution.error);
     }
     return {
-      backend: createOnePasswordBackend({
+      backend: createSecretsBackend({
         $: ctx.$,
         locations,
         config: resolution.config,
       }),
     };
+  };
+
+  const runSecretsCommand = async (
+    action: (backend: SecretsBackend) => Promise<string>
+  ): Promise<string> => {
+    const resolved = await resolveSecretsBackendForCommand();
+    if ('message' in resolved) {
+      return resolved.message;
+    }
+    return await action(resolved.backend);
   };
 
   return {
@@ -342,7 +376,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
             const branch = resolveRepoBranch(config);
             await commitAll(ctx.$, repoRoot, 'Initial sync from opencode-synced');
             await pushBranch(ctx.$, repoRoot, branch);
-            await writeState(locations, { lastPush: new Date().toISOString() });
+            await updateState(locations, { lastPush: new Date().toISOString() });
           }
         }
 
@@ -398,7 +432,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         const plan = buildSyncPlan(config, locations, repoRoot);
         await syncRepoToLocal(plan, overrides);
 
-        await writeState(locations, {
+        await updateState(locations, {
           lastPull: new Date().toISOString(),
           lastRemoteUpdate: new Date().toISOString(),
         });
@@ -446,7 +480,7 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         await syncRepoToLocal(plan, overrides);
         await runSecretsPullIfConfigured(config);
 
-        await writeState(locations, {
+        await updateState(locations, {
           lastPull: new Date().toISOString(),
           lastRemoteUpdate: new Date().toISOString(),
         });
@@ -470,7 +504,6 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
           );
         }
 
-        await runSecretsPushIfConfigured(config);
         const overrides = await loadOverrides(locations);
         const plan = buildSyncPlan(config, locations, repoRoot);
         await syncLocalToRepo(plan, overrides, {
@@ -480,6 +513,13 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
 
         const dirty = await hasLocalChanges(ctx.$, repoRoot);
         if (!dirty) {
+          const secretsResult = await runSecretsPushIfConfigured(config);
+          if (secretsResult === 'pushed') {
+            return 'No local changes to push. Secrets updated.';
+          }
+          if (secretsResult === 'skipped') {
+            return 'No local changes to push. Secrets unchanged.';
+          }
           return 'No local changes to push.';
         }
 
@@ -487,40 +527,38 @@ export function createSyncService(ctx: SyncServiceContext): SyncService {
         await commitAll(ctx.$, repoRoot, message);
         await pushBranch(ctx.$, repoRoot, branch);
 
-        await writeState(locations, {
+        await runSecretsPushIfConfigured(config);
+
+        await updateState(locations, {
           lastPush: new Date().toISOString(),
         });
 
         return `Pushed changes: ${message}`;
       }),
     secretsPull: () =>
-      runExclusive(async () => {
-        const resolved = await resolveSecretsBackendForCommand();
-        if ('message' in resolved) {
-          return resolved.message;
-        }
-        const backend = resolved.backend;
-        await backend.pull();
-        return 'Pulled secrets from 1Password.';
-      }),
+      runExclusive(() =>
+        runSecretsCommand(async (backend) => {
+          await backend.pull();
+          await updateSecretsHashState();
+          return 'Pulled secrets from 1Password.';
+        })
+      ),
     secretsPush: () =>
-      runExclusive(async () => {
-        const resolved = await resolveSecretsBackendForCommand();
-        if ('message' in resolved) {
-          return resolved.message;
-        }
-        const backend = resolved.backend;
-        await backend.push();
-        return 'Pushed secrets to 1Password.';
-      }),
+      runExclusive(() =>
+        runSecretsCommand(async (backend) => {
+          const result = await pushSecretsWithBackend(backend);
+          if (result === 'skipped') {
+            return 'Secrets unchanged; skipping 1Password push.';
+          }
+          return 'Pushed secrets to 1Password.';
+        })
+      ),
     secretsStatus: () =>
-      runExclusive(async () => {
-        const resolved = await resolveSecretsBackendForCommand();
-        if ('message' in resolved) {
-          return resolved.message;
-        }
-        return await resolved.backend.status();
-      }),
+      runExclusive(() =>
+        runSecretsCommand(async (backend) => {
+          return await backend.status();
+        })
+      ),
     enableSecrets: (options?: { extraSecretPaths?: string[]; includeMcpSecrets?: boolean }) =>
       runExclusive(async () => {
         const config = await getConfigOrThrow(locations);
@@ -631,7 +669,7 @@ async function runStartup(
     const plan = buildSyncPlan(config, locations, repoRoot);
     await syncRepoToLocal(plan, overrides);
     await options.runSecretsPullIfConfigured(config);
-    await writeState(locations, {
+    await updateState(locations, {
       lastPull: new Date().toISOString(),
       lastRemoteUpdate: new Date().toISOString(),
     });
@@ -655,7 +693,7 @@ async function runStartup(
   log.info('Pushing local changes', { message });
   await commitAll(ctx.$, repoRoot, message);
   await pushBranch(ctx.$, repoRoot, branch);
-  await writeState(locations, {
+  await updateState(locations, {
     lastPush: new Date().toISOString(),
   });
 }
