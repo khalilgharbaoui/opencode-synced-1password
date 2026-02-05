@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented here by Release Please.
 
+## [1.0.3](https://github.com/khalilgharbaoui/opencode-synced-1password/compare/v1.0.2...v1.0.3) (2026-02-05)
+
+
+### Bug Fixes
+
+* harden secrets backend integration ([5c37236](https://github.com/khalilgharbaoui/opencode-synced-1password/commit/5c37236ec76c27125adc9e99156e87622bf9ea8b))
+* sync opencode-synced config ([034bbe8](https://github.com/khalilgharbaoui/opencode-synced-1password/commit/034bbe8feb72cf4f2306399788dca5d897d50283))
+
 ## [1.0.2](https://github.com/khalilgharbaoui/opencode-synced-1password/compare/v1.0.1...v1.0.2) (2026-02-01)
 
 
