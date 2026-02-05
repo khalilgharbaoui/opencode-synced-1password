@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import type { NormalizedSyncConfig, SyncConfig } from './config.js';
-import { isOnePasswordBackend } from './config.js';
+import { hasSecretsBackend } from './config.js';
 
 export interface XdgPaths {
   homeDir: string;
@@ -185,7 +185,7 @@ export function buildSyncPlan(
   const configManifestPath = path.join(repoConfigRoot, 'extra-manifest.json');
 
   const items: SyncItem[] = [];
-  const usingOnePasswordBackend = isOnePasswordBackend(config);
+  const usingSecretsBackend = hasSecretsBackend(config);
   const authJsonPath = path.join(dataRoot, 'auth.json');
   const mcpAuthJsonPath = path.join(dataRoot, 'mcp-auth.json');
 
@@ -225,7 +225,7 @@ export function buildSyncPlan(
   }
 
   if (config.includeSecrets) {
-    if (!usingOnePasswordBackend) {
+    if (!usingSecretsBackend) {
       items.push(
         {
           localPath: authJsonPath,
@@ -270,7 +270,7 @@ export function buildSyncPlan(
   }
 
   const extraSecretPaths = config.includeSecrets ? config.extraSecretPaths : [];
-  const filteredExtraSecrets = usingOnePasswordBackend
+  const filteredExtraSecrets = usingSecretsBackend
     ? extraSecretPaths.filter(
         (entry) =>
           !isSamePath(entry, authJsonPath, locations.xdg.homeDir, platform) &&

@@ -15,7 +15,6 @@ export type SecretsBackendType = '1password';
 export interface SecretsBackendDocuments {
   authJson?: string;
   mcpAuthJson?: string;
-  envFile?: string;
 }
 
 export interface SecretsBackendConfig {
@@ -52,6 +51,7 @@ export interface SyncState {
   lastPull?: string;
   lastPush?: string;
   lastRemoteUpdate?: string;
+  lastSecretsHash?: string;
 }
 
 export async function pathExists(filePath: string): Promise<boolean> {
@@ -73,6 +73,11 @@ export async function chmodIfExists(filePath: string, mode: number): Promise<voi
   }
 }
 
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object') return false;
+  return Object.getPrototypeOf(value) === Object.prototype;
+}
+
 export function normalizeSecretsBackend(
   input: SyncConfig['secretsBackend']
 ): SecretsBackendConfig | undefined {
@@ -86,7 +91,6 @@ export function normalizeSecretsBackend(
     authJson: typeof documentsInput.authJson === 'string' ? documentsInput.authJson : undefined,
     mcpAuthJson:
       typeof documentsInput.mcpAuthJson === 'string' ? documentsInput.mcpAuthJson : undefined,
-    envFile: typeof documentsInput.envFile === 'string' ? documentsInput.envFile : undefined,
   };
 
   return { type: '1password', vault, documents };
@@ -113,8 +117,8 @@ export function canCommitMcpSecrets(config: SyncConfig): boolean {
   return Boolean(config.includeSecrets) && Boolean(config.includeMcpSecrets);
 }
 
-export function isOnePasswordBackend(config: NormalizedSyncConfig): boolean {
-  return config.secretsBackend?.type === '1password';
+export function hasSecretsBackend(config: SyncConfig | NormalizedSyncConfig): boolean {
+  return Boolean(config.secretsBackend);
 }
 
 export async function loadSyncConfig(
@@ -159,6 +163,14 @@ export async function loadState(locations: SyncLocations): Promise<SyncState> {
 export async function writeState(locations: SyncLocations, state: SyncState): Promise<void> {
   await fs.mkdir(path.dirname(locations.statePath), { recursive: true });
   await writeJsonFile(locations.statePath, state, { jsonc: false });
+}
+
+export async function updateState(
+  locations: SyncLocations,
+  update: Partial<SyncState>
+): Promise<void> {
+  const existing = await loadState(locations);
+  await writeState(locations, { ...existing, ...update });
 }
 
 export function applyOverridesToRuntimeConfig(
@@ -316,11 +328,6 @@ export async function writeJsonFile(
   if (options.mode !== undefined) {
     await chmodIfExists(filePath, options.mode);
   }
-}
-
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (!value || typeof value !== 'object') return false;
-  return Object.getPrototypeOf(value) === Object.prototype;
 }
 
 export function hasOwn(target: Record<string, unknown>, key: string): boolean {
